@@ -14,7 +14,7 @@ import seaborn as sns
 
 def load_data(path: str) -> pd.DataFrame:
     """Carrega o dataset a partir de um ficheiro CSV."""
-    df = pd.read_csv(path)
+    df = pd.read_csv("../dataset/raw/Malware_and_benign_recognition.csv")
     print("Dimensões do dataset:", df.shape)
     print("\nColunas:")
     print(df.columns.tolist())

@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 def load_data(path: str) -> pd.DataFrame:
     """Carrega o dataset a partir de um ficheiro CSV."""
-    df = pd.read_csv(path)
+    df = pd.read_csv("../dataset/raw/Malware_and_benign_recognition.csv")
     print("Dimensões do dataset:", df.shape)
     return df
 
