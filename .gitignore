@@ -1,0 +1,16 @@
+#Virtual envioremnet 
+.venv/
+venv/
+
+#Python cache
+__pychache__
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
