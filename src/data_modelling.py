@@ -11,12 +11,13 @@ import joblib
 from datetime import datetime
 
 import pandas as pd
+from sklearn.base import clone
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, f1_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, ParameterGrid
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, get_scorer
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -28,7 +29,23 @@ from sklearn.neural_network import MLPClassifier
 
 
 def _timestamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+
+
+def _reserve_artifact_path(output_dir: str, filename: str) -> str:
+    """Reserva um nome de artefacto livre para impedir que uma execu??o o substitua."""
+    stem, extension = os.path.splitext(filename)
+    suffix = 1
+    while True:
+        candidate_name = filename if suffix == 1 else f"{stem}_{suffix}{extension}"
+        candidate_path = os.path.join(output_dir, candidate_name)
+        try:
+            descriptor = os.open(candidate_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            suffix += 1
+            continue
+        os.close(descriptor)
+        return candidate_path
 
 
 # ==========================================
@@ -131,7 +148,7 @@ def plot_model_comparison(
     """Guarda um gráfico de barras a comparar os modelos pela métrica escolhida, sem sobrescrever execuções anteriores."""
     os.makedirs(output_dir, exist_ok=True)
     timestamp = timestamp or _timestamp()
-    save_path = os.path.join(output_dir, f"comparacao_modelos_{dataset_name}_{timestamp}.png")
+    save_path = _reserve_artifact_path(output_dir, f"comparacao_modelos_{dataset_name}_{timestamp}.png")
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(results_df["modelo"], results_df["media"], xerr=results_df["desvio_padrao"])
@@ -160,35 +177,76 @@ def train_final_model(
     model_name: str,
     X_train: pd.DataFrame,
     y_train: pd.Series,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
     tune: bool = True,
     scoring: str = "f1_macro",
-    n_splits: int = 5,
-    random_state: int = 42,
-    n_jobs: int = -1,
 ) -> Pipeline:
-    """
-    Treina o pipeline do modelo escolhido em todo o conjunto de treino.
-    Se tune=True (omissão) e houver grelha de hiperparâmetros definida para
-    o modelo, afina-os por GridSearchCV antes de ajustar o pipeline final.
-    """
+    """Escolhe hiperpar?metros na valida??o e devolve o pipeline ajustado no treino."""
+    param_grid = PARAM_GRIDS.get(model_name, {}) if tune else {}
+    candidates = list(ParameterGrid(param_grid)) if param_grid else [{}]
+    scorer = get_scorer(scoring)
+    best_score = float("-inf")
+    best_params = {}
+
+    for params in candidates:
+        model, needs_scaling = get_models()[model_name]
+        candidate = build_pipeline(model, needs_scaling)
+        candidate.set_params(**params)
+        candidate.fit(X_train, y_train)
+        score = scorer(candidate, X_val, y_val)
+        if score > best_score:
+            best_score, best_params = score, params
+
     model, needs_scaling = get_models()[model_name]
-    pipe = build_pipeline(model, needs_scaling)
+    best_pipe = build_pipeline(model, needs_scaling)
+    best_pipe.set_params(**best_params)
+    best_pipe.fit(X_train, y_train)
+    print(f"Melhores hiperpar?metros para {model_name}: {best_params}")
+    print(f"{scoring} na valida??o: {best_score:.4f}")
+    return best_pipe
 
-    param_grid = PARAM_GRIDS.get(model_name, {})
-    if tune and param_grid:
-        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-        grid = GridSearchCV(pipe, param_grid, scoring=scoring, cv=cv, n_jobs=n_jobs)
-        grid.fit(X_train, y_train)
-        print(f"Melhores hiperparâmetros para {model_name}: {grid.best_params_}")
-        return grid.best_estimator_
 
-    pipe.fit(X_train, y_train)
-    return pipe
+def refit_final_model(
+    pipe: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
+) -> tuple:
+    """Ajusta o pipeline escolhido com treino + valida??o antes do teste final."""
+    X_train_val = pd.concat([X_train, X_val], axis=0)
+    y_train_val = pd.concat([y_train, y_val], axis=0)
+    final_pipe = clone(pipe)
+    final_pipe.fit(X_train_val, y_train_val)
+    return final_pipe, X_train_val, y_train_val
 
 
 # ==========================================
-# AVALIAÇÃO (TESTE + DETEÇÃO DE OVERFITTING)
-# ==========================================
+
+def evaluate_on_validation(
+    pipe: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_val: pd.DataFrame,
+    y_val: pd.Series,
+    scoring: str = "f1_macro",
+) -> dict:
+    """Regista desempenho de treino/valida??o antes de reajustar o modelo final."""
+    scorer = get_scorer(scoring)
+    train_score = scorer(pipe, X_train, y_train)
+    validation_score = scorer(pipe, X_val, y_val)
+    gap = train_score - validation_score
+    print(f"\n--- Treino vs valida??o ({scoring}) ---")
+    print(f"Treino: {train_score:.4f} | Valida??o: {validation_score:.4f} | Diferen?a: {gap:.4f}")
+    return {
+        "scoring": scoring,
+        "train_score": round(float(train_score), 4),
+        "validation_score": round(float(validation_score), 4),
+        "overfitting_gap": round(float(gap), 4),
+        "best_params": pipe.named_steps["model"].get_params(),
+    }
+
 
 def evaluate_on_test(
     pipe: Pipeline,
@@ -210,18 +268,13 @@ def evaluate_on_test(
     timestamp = timestamp or _timestamp()
 
     y_pred_test = pipe.predict(X_test)
-    y_pred_train = pipe.predict(X_train)
 
     print("\n--- Classification report (teste) ---")
     print(classification_report(y_test, y_pred_test))
 
-    score_fn = f1_score if scoring == "f1_macro" else None
-    if score_fn is not None:
-        train_score = f1_score(y_train, y_pred_train, average="macro")
-        test_score = f1_score(y_test, y_pred_test, average="macro")
-    else:
-        train_score = (y_pred_train == y_train).mean()
-        test_score = (y_pred_test == y_test).mean()
+    scorer = get_scorer(scoring)
+    train_score = scorer(pipe, X_train, y_train)
+    test_score = scorer(pipe, X_test, y_test)
 
     gap = train_score - test_score
     print(f"\n--- Overfitting check ({scoring}) ---")
@@ -235,7 +288,7 @@ def evaluate_on_test(
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot(cmap="Blues")
     plt.title(f"Matriz de confusão — {dataset_name} (teste)")
-    save_path = os.path.join(output_dir, f"matriz_confusao_{dataset_name}_{timestamp}.png")
+    save_path = _reserve_artifact_path(output_dir, f"matriz_confusao_{dataset_name}_{timestamp}.png")
     plt.savefig(save_path, bbox_inches="tight")
     plt.close()
     print(f"Gráfico guardado em: {save_path}")
@@ -313,42 +366,42 @@ def save_model(
 
 def run_modeling(
     X_train: pd.DataFrame,
+    X_val: pd.DataFrame,
     X_test: pd.DataFrame,
     y_train: pd.Series,
+    y_val: pd.Series,
     y_test: pd.Series,
     dataset_name: str = "dataset",
     scoring: str = "f1_macro",
     output_dir: str = "../models",
     tune: bool = True,
 ) -> Pipeline:
-    """Corre a fase de Modeling do início ao fim: compara, afina, treina, avalia e guarda (com metadados)."""
+    """Compara, afina na valida??o, reajusta em treino+valida??o e avalia no teste."""
     timestamp = _timestamp()
-
     results_df = evaluate_models(X_train, y_train, scoring=scoring)
     save_results_csv(results_df, dataset_name=dataset_name, output_dir=output_dir, timestamp=timestamp)
     plot_model_comparison(results_df, scoring=scoring, dataset_name=dataset_name, output_dir=output_dir, timestamp=timestamp)
 
     best_name = select_best_model(results_df)
-    best_pipe = train_final_model(best_name, X_train, y_train, tune=tune, scoring=scoring)
-
-    metrics = evaluate_on_test(
-        best_pipe, X_train, y_train, X_test, y_test,
+    tuned_pipe = train_final_model(best_name, X_train, y_train, X_val, y_val, tune=tune, scoring=scoring)
+    validation_metrics = evaluate_on_validation(tuned_pipe, X_train, y_train, X_val, y_val, scoring=scoring)
+    best_pipe, X_train_val, y_train_val = refit_final_model(tuned_pipe, X_train, y_train, X_val, y_val)
+    test_metrics = evaluate_on_test(
+        best_pipe, X_train_val, y_train_val, X_test, y_test,
         scoring=scoring, dataset_name=dataset_name, output_dir=output_dir, timestamp=timestamp,
     )
+    metrics = {**validation_metrics, **{f"test_{key}": value for key, value in test_metrics.items()}}
     metrics["cv_score_medio"] = round(float(results_df.iloc[0]["media"]), 4)
     metrics["cv_score_desvio_padrao"] = round(float(results_df.iloc[0]["desvio_padrao"]), 4)
-
     save_model(
         best_pipe, best_name, dataset_name=dataset_name, output_dir=output_dir,
         metrics=metrics, feature_names=list(X_train.columns), timestamp=timestamp,
     )
-
-    print("\n--- Modeling concluído ---")
+    print("\n--- Modeling conclu?do ---")
     return best_pipe
-
 
 if __name__ == "__main__":
     import data_preparation as dp
 
-    X_train, X_test, y_train, y_test = dp.run_data_preparation("../dataset/raw/Malware_and_benign_recognition.csv")
-    run_modeling(X_train, X_test, y_train, y_test, dataset_name="malware")
+    X_train, X_val, X_test, y_train, y_val, y_test = dp.run_data_preparation("../dataset/raw/Malware_and_benign_recognition.csv")
+    run_modeling(X_train, X_val, X_test, y_train, y_val, y_test, dataset_name="malware")

@@ -67,23 +67,34 @@ def split_features_target(df: pd.DataFrame, target: str) -> tuple:
 
 
 # ==========================================
-# SPLIT TREINO/TESTE
+# SPLIT TREINO/VALIDA??O/TESTE
 # ==========================================
 
-def split_train_test(X: pd.DataFrame, y: pd.Series, test_size: float = 0.20, random_state: int = 42) -> tuple:
-    """Divide os dados em treino e teste, mantendo a proporção de classes."""
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
-        test_size=test_size,
-        random_state=random_state,
-        stratify=y,
+def split_train_validation_test(
+    X: pd.DataFrame,
+    y: pd.Series,
+    validation_size: float = 0.15,
+    test_size: float = 0.15,
+    random_state: int = 42,
+) -> tuple:
+    """Divide os dados em treino/valida??o/teste com propor??es estratificadas."""
+    if validation_size <= 0 or test_size <= 0 or validation_size + test_size >= 1:
+        raise ValueError("validation_size e test_size t?m de ser positivos e a soma inferior a 1.")
+
+    X_train_val, X_test, y_train_val, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state, stratify=y,
+    )
+    validation_fraction = validation_size / (1 - test_size)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_val, y_train_val, test_size=validation_fraction,
+        random_state=random_state, stratify=y_train_val,
     )
 
-    print("\n--- Divisão dos dados ---")
-    print("Treino:", X_train.shape)
-    print("Teste:", X_test.shape)
-
-    return X_train, X_test, y_train, y_test
+    print("\n--- Divis?o dos dados ---")
+    print(f"Treino: {X_train.shape} ({len(X_train) / len(X):.1%})")
+    print(f"Valida??o: {X_val.shape} ({len(X_val) / len(X):.1%})")
+    print(f"Teste: {X_test.shape} ({len(X_test) / len(X):.1%})")
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
 
 # ==========================================
@@ -94,24 +105,23 @@ def run_data_preparation(
     path: str,
     target: str = "Malicious",
     id_column: str = "File",
-    test_size: float = 0.20,
+    validation_size: float = 0.15,
+    test_size: float = 0.15,
     random_state: int = 42,
 ) -> tuple:
-    """Corre a fase de Data Preparation do início ao fim e devolve os dados prontos."""
+    """Prepara e devolve treino, valida??o e teste estratificados."""
     df = load_data(path)
     check_missing_duplicates(df)
     df = clean_data(df, id_column=id_column)
     X, y = split_features_target(df, target)
-    X_train, X_test, y_train, y_test = split_train_test(X, y, test_size, random_state)
+    splits = split_train_validation_test(
+        X, y, validation_size=validation_size, test_size=test_size, random_state=random_state,
+    )
 
-    print("\n--- Data Preparation concluído ---")
-    print("X_train:", X_train.shape)
-    print("X_test:", X_test.shape)
-    print("y_train:", y_train.shape)
-    print("y_test:", y_test.shape)
-
-    return X_train, X_test, y_train, y_test
-
+    print("\n--- Data Preparation conclu?do ---")
+    for name, split in zip(("X_train", "X_val", "X_test", "y_train", "y_val", "y_test"), splits):
+        print(f"{name}: {split.shape}")
+    return splits
 
 if __name__ == "__main__":
     run_data_preparation("Malware_and_benign_recognition.csv")
