@@ -15,8 +15,9 @@ Passos aplicados (decididos na fase de Data Understanding):
 Pensado para ser importado quer por um script, quer por um notebook.
 """
 
+from pathlib import Path
+
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 
 
@@ -26,7 +27,11 @@ from sklearn.model_selection import train_test_split
 
 def load_data(path: str) -> pd.DataFrame:
     """Carrega o dataset a partir de um ficheiro CSV."""
-    df = pd.read_csv("../dataset/raw/MalwareMemoryDump.csv")
+    dataset_path = Path(path)
+    if not dataset_path.is_absolute():
+        dataset_path = Path(__file__).resolve().parents[1] / dataset_path
+
+    df = pd.read_csv(dataset_path)
     print("Dimensões do dataset:", df.shape)
     return df
 
@@ -136,12 +141,17 @@ def clean_data(df: pd.DataFrame, id_column: str = "Raw_Type",
 # ==========================================
 
 def split_features_target(df: pd.DataFrame, target: str = "Label") -> tuple:
-    """Separa o dataframe em features (X) e target (y)."""
+    """Separa features e target binário codificado como 0/1."""
+    if target not in df.columns:
+        raise ValueError(f"A coluna alvo '{target}' não existe no dataset.")
+
     X = df.drop(columns=[target])
-    y = df[target]
+    y = df[target].map({"Benign": 0, "Malware": 1})
+    if y.isna().any():
+        raise ValueError("O alvo deve conter somente 'Benign' e 'Malware'.")
 
     print(f"\n--- Distribuição das classes ({target}) ---")
-    print((y.value_counts(normalize=True).round(3) * 100))
+    print(y.value_counts(normalize=True).round(3) * 100)
 
     return X, y
 
@@ -166,6 +176,35 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, test_size: float = 0.20, ran
     return X_train, X_test, y_train, y_test
 
 
+def split_train_validation_test(
+    X: pd.DataFrame,
+    y: pd.Series,
+    validation_size: float = 0.15,
+    test_size: float = 0.15,
+    random_state: int = 42,
+) -> tuple:
+    """Divide em treino, validação e teste sem usar dados de teste na escolha do modelo."""
+    if not 0 < validation_size < 1 or not 0 < test_size < 1:
+        raise ValueError("validation_size e test_size devem ser entre 0 e 1")
+    if validation_size + test_size >= 1.0:
+        raise ValueError("validation_size + test_size deve ser menor que 1")
+
+    X_train, X_remaining, y_train, y_remaining = train_test_split(
+        X, y, test_size=validation_size + test_size,
+        random_state=random_state, stratify=y,
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_remaining, y_remaining, test_size=test_size / (validation_size + test_size),
+        random_state=random_state, stratify=y_remaining,
+    )
+
+    print("\n--- Divisão dos dados ---")
+    print("Treino:", X_train.shape)
+    print("Validação:", X_val.shape)
+    print("Teste:", X_test.shape)
+    return X_train, X_val, X_test, y_train, y_val, y_test
+
+
 # ==========================================
 # ORQUESTRAÇÃO (uso como script)
 # ==========================================
@@ -174,24 +213,32 @@ def run_data_preparation(
     path: str,
     target: str = "Label",
     id_column: str = "Raw_Type",
-    test_size: float = 0.20,
+    validation_size: float = 0.15,
+    test_size: float = 0.15,
     random_state: int = 42,
 ) -> tuple:
-    """Corre a fase de Data Preparation do início ao fim e devolve os dados prontos."""
+    """Executa a preparação e devolve treino, validação e teste."""
     df = load_data(path)
     check_missing_duplicates(df)
     df = clean_data(df, id_column=id_column)
     X, y = split_features_target(df, target)
-    X_train, X_test, y_train, y_test = split_train_test(X, y, test_size, random_state)
+    X_train, X_val, X_test, y_train, y_val, y_test = split_train_validation_test(
+        X, y,
+        validation_size=validation_size,
+        test_size=test_size,
+        random_state=random_state,
+    )
 
     print("\n--- Data Preparation concluído ---")
     print("X_train:", X_train.shape)
+    print("X_val:", X_val.shape)
     print("X_test:", X_test.shape)
     print("y_train:", y_train.shape)
+    print("y_val:", y_val.shape)
     print("y_test:", y_test.shape)
 
-    return X_train, X_test, y_train, y_test
+    return X_train, X_val, X_test, y_train, y_val, y_test
 
 
 if __name__ == "__main__":
-    run_data_preparation("MalwareMemoryDump.csv")
+    run_data_preparation("dataset/raw/MalwareMemoryDump.csv")
