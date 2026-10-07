@@ -1,17 +1,17 @@
 # IAAC-Repo
 
-Projeto de classifica??o de execut?veis PE em benignos e maliciosos. O fluxo est? organizado em tr?s etapas: explora??o, prepara??o dos dados e compara??o/avalia??o de modelos.
+Projeto de classificação de executáveis PE em benignos e maliciosos, organizado segundo as etapas CRISP-ML.
 
 ## Estrutura
 
 - `dataset/raw/`: CSV de entrada.
-- `src/`: fun??es reutiliz?veis para cada etapa.
-- `notebooks/`: explora??o, prepara??o e modela??o, por ordem.
-- `models/`: pipelines treinados, metadados e relat?rios gerados.
+- `src/`: funções reutilizáveis para cada etapa.
+- `notebooks/`: exploração, preparação, modeling e avaliação/otimização, por ordem.
+- `models/`: pipelines treinados, metadados e relatórios gerados.
 
-## Configura??o
+## Configuração
 
-Requer Python 3.10 ou superior. Crie um ambiente virtual e instale as depend?ncias listadas:
+Requer Python 3.10 ou superior. Crie um ambiente virtual e instale as dependências listadas:
 
 ```powershell
 py -m venv .venv
@@ -19,10 +19,10 @@ py -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Abra os notebooks com Jupyter a partir de `notebooks/`, ou execute as fun??es de `src/` com os caminhos relativos ? raiz do reposit?rio. A sequ?ncia recomendada ? `01_data_understanding.ipynb`, `02_data_preparation.ipynb` e `03_modeling.ipynb`.
+Abra os notebooks com Jupyter a partir de `notebooks/`, ou execute as funções de `src/` com os caminhos relativos à raiz do repositório. A sequência recomendada é `01_data_understanding.ipynb`, `02_data_preparation.ipynb`, `03_modeling.ipynb` e `04_model_evaluation_optimization.ipynb`.
 
-## Dados e avalia??o
+## Dados e avaliação
 
-O pipeline divide os dados de forma estratificada em 70% treino, 15% validacao e 15% teste. A comparacao dos modelos usa validacao cruzada nos dados de treino; a afinacao de hiperparametros usa o conjunto de validacao. O modelo final e reajustado com treino + validacao e avaliado uma vez no teste.
+O pipeline divide os dados de forma estratificada em 70% treino, 15% validação e 15% teste. A comparação inicial dos modelos usa validação cruzada no treino. Na etapa de Evaluation & Optimization, os hiperparâmetros são afinados por validação cruzada apenas no treino; a validação escolhe o limiar da classe maliciosa; e o teste fica reservado para a avaliação final.
 
-A compara??o e avalia??o s?o implementadas em `src/data_modelling.py`. Modelos, metadados e gr?ficos s?o guardados em `models/`. Os ficheiros `*_latest` s?o substitu?dos a cada execu??o; os ficheiros com timestamp preservam execu??es anteriores.
+A comparação está implementada em `src/data_modelling.py`. A afinação, otimização do limiar e avaliação final estão em `src/data_evaluation.py`. Os modelos, metadados e gráficos são guardados em `models/`. Os ficheiros `*_latest` são atualizados a cada execução; os ficheiros com timestamp preservam execuções anteriores.
