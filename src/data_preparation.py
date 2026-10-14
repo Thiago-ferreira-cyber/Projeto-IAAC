@@ -8,6 +8,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 
+# Increment this when the rules used to build the modeling data change.
+PREPARATION_VERSION = "deduplicate_exact_samples_v1"
+
+
 # ==========================================
 # CARREGAMENTO
 # ==========================================
@@ -36,8 +40,12 @@ def check_missing_duplicates(df: pd.DataFrame) -> None:
 # LIMPEZA
 # ==========================================
 
-def clean_data(df: pd.DataFrame, id_column: str = "File") -> pd.DataFrame:
-    """Corrige tipos de dados e remove o identificador único."""
+def clean_data(
+    df: pd.DataFrame,
+    id_column: str = "File",
+    remove_exact_duplicates: bool = True,
+) -> pd.DataFrame:
+    """Corrige tipos, remove o identificador e deduplica linhas idênticas."""
     df = df.copy()
 
     # ImageBase vem como uint64 (valores muito grandes) — passar para int64
@@ -47,6 +55,12 @@ def clean_data(df: pd.DataFrame, id_column: str = "File") -> pd.DataFrame:
     # Identificador único, não deve ser usado como feature
     if id_column in df.columns:
         df = df.drop(columns=[id_column])
+
+    if remove_exact_duplicates:
+        original_rows = len(df)
+        df = df.drop_duplicates(keep="first")
+        removed = original_rows - len(df)
+        print(f"Duplicados exatos removidos (sem {id_column}): {removed}")
 
     return df
 
@@ -62,6 +76,18 @@ def split_features_target(df: pd.DataFrame, target: str) -> tuple:
 
     print(f"\n--- Distribuição das classes ({target}) ---")
     print((y.value_counts(normalize=True).round(3) * 100))
+
+    constant_features = X.columns[X.nunique(dropna=False) <= 1].tolist()
+    duplicate_features = []
+    columns = list(X.columns)
+    for index, column in enumerate(columns):
+        for other in columns[index + 1:]:
+            if X[column].equals(X[other]):
+                duplicate_features.append((column, other))
+
+    print("\n--- Auditoria de features (informativa; não remove colunas) ---")
+    print(f"Features constantes: {constant_features or 'nenhuma'}")
+    print(f"Pares de features idênticas: {duplicate_features or 'nenhum'}")
 
     return X, y
 

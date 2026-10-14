@@ -27,6 +27,8 @@ O pipeline divide os dados de forma estratificada em 70% treino, 15% validação
 
 A comparação está implementada em `src/data_modelling.py`. A afinação, otimização do limiar e avaliação final estão em `src/data_evaluation.py`. Os modelos, metadados e gráficos são guardados em `models/`. Os ficheiros `*_latest` são atualizados a cada execução; os ficheiros com timestamp preservam execuções anteriores.
 
+Na preparação, linhas duplicadas em todas as colunas exceto `File` são removidas antes da divisão. A auditoria também assinala features constantes ou idênticas sem as remover, para manter explícito o esquema de features. A versão das regras de preparação fica guardada nos metadados do modelo; depois desta alteração, executa novamente o notebook `04_model_evaluation_optimization.ipynb` antes de gerar o relatório final do teste.
+
 ## Relatório de teste no Telegram
 
 O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, recria a divisão estratificada com `random_state=42`, avalia o conjunto de teste e gera um relatório textual com métricas e previsões por sample. Guarda uma cópia `.txt` em `models/` e, se as credenciais estiverem definidas, envia o texto em mensagens para o Telegram.

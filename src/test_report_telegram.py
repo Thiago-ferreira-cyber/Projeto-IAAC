@@ -54,6 +54,11 @@ def build_test_report() -> tuple[str, Path]:
         raise FileNotFoundError("Dataset, modelo latest ou metadados não encontrados.")
 
     metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+    if metadata.get("preparation_version") != dp.PREPARATION_VERSION:
+        raise ValueError(
+            "O modelo latest foi treinado com outra versão da preparação dos dados. "
+            "Executa novamente o notebook 04 para treinar e guardar o modelo após a deduplicação."
+        )
     metrics = metadata.get("metricas", {})
     # Notebook 04 records its validation-selected threshold. Notebook 03 refits on
     # train + validation, so its latest model must not be presented as test-independent.
