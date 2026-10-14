@@ -1,0 +1,207 @@
+RELATÓRIO DE AVALIAÇÃO — CONJUNTO DE TESTE
+Modelo: Random Forest | Data: 2026-10-14 15:07:40
+Samples: 174 | Limiar malware: 0.6500
+Accuracy: 0.9828 | F1 macro: 0.9828
+
+MATRIZ DE CONFUSÃO (real × previsto)
+                 Previsto benigno | Previsto malware
+Real benigno                  87 |               1
+Real malware                   2 |              84
+
+MÉTRICAS POR CLASSE
+Classe         Precisão     Recall         F1      N
+Benigno           0.978      0.989      0.983     88
+Malicioso         0.988      0.977      0.982     86
+
+PREVISÕES POR SAMPLE
+Ficheiro                       Real       Previsto     Score Resultado
+---------------------------------------------------------------------------
+dca8e8fb6836227f52ede805b9...  Malware    Malware      0.970 CERTO
+dd27382fc1aedce2b5d23dcfe3...  Malware    Malware      0.990 CERTO
+e_22_BackgroundTransferHos...  Benigno    Benigno      0.000 CERTO
+d_129_AuthFWSnapin.dll         Benigno    Malware      0.840 ERRO
+ae9e4365816e3f229297938b9a...  Malware    Malware      1.000 CERTO
+bb60d9a5b5a493cf44b8005b9b...  Malware    Malware      1.000 CERTO
+e_31_bootim.exe                Benigno    Benigno      0.000 CERTO
+e_33_bridgeunattend.exe        Benigno    Benigno      0.000 CERTO
+d_40_adpsvc.dll                Benigno    Benigno      0.000 CERTO
+e_1_AggregatorHost.exe         Benigno    Benigno      0.040 CERTO
+3c38fc6b9916001b80f0444369...  Malware    Malware      0.930 CERTO
+d_156_bcastdvruserservice.dll  Benigno    Benigno      0.000 CERTO
+0d9516237039b1c01c3d2f5d3c...  Malware    Malware      0.920 CERTO
+2a455e99def6cf4a3814975244...  Malware    Malware      0.990 CERTO
+279d1952e08e192c7b88eb4839...  Malware    Malware      1.000 CERTO
+bee4be30c05b499d7c25a7f69a...  Malware    Malware      1.000 CERTO
+d_193_bootsvc.dll              Benigno    Benigno      0.000 CERTO
+05aafe02cafac6e06e973328b8...  Malware    Malware      1.000 CERTO
+e_283_MuiUnattend.exe          Benigno    Benigno      0.000 CERTO
+89f62172f08a586e61713ca48a...  Malware    Malware      1.000 CERTO
+5dc00dd00d6904900e004fe13e...  Malware    Malware      1.000 CERTO
+e_29_BitLockerWizardElev.exe   Benigno    Benigno      0.000 CERTO
+e_54_cleanmgr.exe              Benigno    Benigno      0.000 CERTO
+e_2_AppHostRegistrationVer...  Benigno    Benigno      0.000 CERTO
+1bd5bf71cec5756b0dadc09f74...  Malware    Malware      1.000 CERTO
+25ecadb007c25cb3751a95eecf...  Malware    Malware      1.000 CERTO
+f6f4ebaad107ea8d7ca36820f2...  Malware    Malware      1.000 CERTO
+a91e3683c722e1297819b684ba...  Malware    Malware      1.000 CERTO
+ecd93b896e0aa3aa5b10d87850...  Malware    Malware      0.990 CERTO
+d_100_AppxStreamingDataSou...  Benigno    Benigno      0.000 CERTO
+db5a4c852c3ca9541a45a680a5...  Malware    Malware      1.000 CERTO
+3dfa22389fe1a2e4628c2951f1...  Malware    Malware      0.940 CERTO
+c99e8ab6e04a53bc2bef21f994...  Malware    Malware      1.000 CERTO
+d_154_BcastDVRClient.dll       Benigno    Benigno      0.000 CERTO
+e_257_MicrosoftEdgeDevTool...  Benigno    Benigno      0.000 CERTO
+37d2a1626dc205d60f0bec8746...  Malware    Malware      1.000 CERTO
+fe6b81b45bf4dfa5e8453fa326...  Malware    Malware      0.990 CERTO
+e_291_net1.exe                 Benigno    Benigno      0.000 CERTO
+d_192_bootstr.dll              Benigno    Benigno      0.010 CERTO
+122d9df1eea4f711fe7e1da9ad...  Malware    Malware      0.980 CERTO
+d_9_aadWamExtension.dll        Benigno    Benigno      0.000 CERTO
+
+----- PRÓXIMA MENSAGEM -----
+
+PREVISÕES POR SAMPLE (continuação)
+Ficheiro                       Real       Previsto     Score Resultado
+s_1_pwdspio.sys                Benigno    Benigno      0.510 CERTO
+413acbfbd979d63b8e4b80a768...  Malware    Malware      0.980 CERTO
+21363ec0ba00ab823489e79165...  Malware    Malware      1.000 CERTO
+bc64c13545032d1db5f783a997...  Malware    Malware      0.760 CERTO
+39a0ef3d45420b70892cdc05d7...  Malware    Malware      0.850 CERTO
+bc790079efa258b16a7860e1ac...  Malware    Benigno      0.320 ERRO
+d_230_capisp.dll               Benigno    Benigno      0.000 CERTO
+e_68_colorcpl.exe              Benigno    Benigno      0.030 CERTO
+e_70_compact.exe               Benigno    Benigno      0.000 CERTO
+d_133_authz.dll                Benigno    Benigno      0.000 CERTO
+e_89_curl.exe                  Benigno    Benigno      0.600 CERTO
+111725664342508621d6bb4147...  Malware    Malware      0.960 CERTO
+33aa01dccffcb3ebb83f6937dc...  Malware    Malware      1.000 CERTO
+e_206_iexpress.exe             Benigno    Benigno      0.000 CERTO
+5b955991e4d5a58277ef2b1eff...  Malware    Malware      1.000 CERTO
+e_111_diskpart.exe             Benigno    Benigno      0.000 CERTO
+87fe3267b683590bfefe504183...  Malware    Malware      0.970 CERTO
+e_62_cmd.exe                   Benigno    Benigno      0.010 CERTO
+e_233_logman.exe               Benigno    Benigno      0.000 CERTO
+52612bceee07152f2e2e6699b3...  Malware    Malware      1.000 CERTO
+dd86a3e996b53b952e35477b79...  Malware    Malware      1.000 CERTO
+c6433d9aafb4400c2fb6f77253...  Malware    Malware      0.990 CERTO
+0514fd81eee28d55e3b2c789d3...  Malware    Malware      1.000 CERTO
+956d9dd840f6a4e91ea1076e00...  Malware    Benigno      0.570 ERRO
+e_205_ieUnatt.exe              Benigno    Benigno      0.000 CERTO
+4ac1171fd831ad419d986a000e...  Malware    Malware      1.000 CERTO
+e_165_fc.exe                   Benigno    Benigno      0.000 CERTO
+7b00afcfdc739f377a90681e34...  Malware    Malware      1.000 CERTO
+2538ce3d0ee84eedd2ed5f2e7d...  Malware    Malware      0.940 CERTO
+d333cdb64c64ce3b9dd355dbaf...  Malware    Malware      1.000 CERTO
+96c5eb56015e0d68ca061a0c6b...  Malware    Malware      0.960 CERTO
+c80cf54414ea4ba9013eb3df6e...  Malware    Malware      1.000 CERTO
+d_256_certprop.dll             Benigno    Benigno      0.000 CERTO
+12f2379bff69faa08e142ced11...  Malware    Malware      1.000 CERTO
+901263be5889f7c55d4160f715...  Malware    Malware      0.930 CERTO
+e_90_CustomInstallExec.exe     Benigno    Benigno      0.000 CERTO
+89afff292e481ea3e8d8c14144...  Malware    Malware      0.980 CERTO
+s_10_AcpiDev.sys               Benigno    Benigno      0.020 CERTO
+f2e2e2df987cbe9fb2261d45a4...  Malware    Malware      1.000 CERTO
+0318a89256b75a6fd0602afbb7...  Malware    Malware      0.990 CERTO
+8d9b19c7af036a2a3f6d710fdf...  Malware    Malware      1.000 CERTO
+584e662fcb0a55ff1467e72f4b...  Malware    Malware      1.000 CERTO
+5a5d6c685b773df74deb9d8ddb...  Malware    Malware      0.950 CERTO
+93bd28c2c23740c8f08ae1c3e1...  Malware    Malware      0.990 CERTO
+e_287_ndadmin.exe              Benigno    Benigno      0.000 CERTO
+e_276_mshta.exe                Benigno    Benigno      0.000 CERTO
+s_8_3ware.sys                  Benigno    Benigno      0.630 CERTO
+e_267_MpSigStub.exe            Benigno    Benigno      0.470 CERTO
+d_162_bcrypt.dll               Benigno    Benigno      0.000 CERTO
+d_119_AudioSes.dll             Benigno    Benigno      0.020 CERTO
+
+----- PRÓXIMA MENSAGEM -----
+
+PREVISÕES POR SAMPLE (continuação)
+Ficheiro                       Real       Previsto     Score Resultado
+c4aa191fbb92de300094df02a1...  Malware    Malware      0.800 CERTO
+e_282_mtstocom.exe             Benigno    Benigno      0.000 CERTO
+5f43b0ad8cdf49434c55262933...  Malware    Malware      1.000 CERTO
+d_191_BootMenuUX.dll           Benigno    Benigno      0.000 CERTO
+21bf530d180ac2a214028fc62c...  Malware    Malware      0.960 CERTO
+c3972dc848367b7bb2d88efcf0...  Malware    Malware      0.980 CERTO
+23065d96066bbc0d294eb11460...  Malware    Malware      1.000 CERTO
+0166cf88bfbcc0f65276682d52...  Malware    Malware      1.000 CERTO
+d_209_BthpanContextHandler...  Benigno    Benigno      0.000 CERTO
+d_254_CertPKICmdlet.dll        Benigno    Benigno      0.000 CERTO
+d665e55f28a4b68de30f1c5f2c...  Malware    Malware      0.970 CERTO
+e_167_FileDialogBroker.exe     Benigno    Benigno      0.000 CERTO
+e_198_hvax64.exe               Benigno    Benigno      0.220 CERTO
+e_49_chkntfs.exe               Benigno    Benigno      0.000 CERTO
+5b27227f1cb5b81175c593376e...  Malware    Malware      0.970 CERTO
+a3357684eec66f12d07a9a7477...  Malware    Malware      0.940 CERTO
+e_236_lpksetup.exe             Benigno    Benigno      0.020 CERTO
+e_288_NDKPerfCmd.exe           Benigno    Benigno      0.000 CERTO
+33863161f269a2542bbfcff874...  Malware    Malware      1.000 CERTO
+d_179_bitsigd.dll              Benigno    Benigno      0.000 CERTO
+e9c3818e5db04e727177ecb290...  Malware    Malware      0.990 CERTO
+d_221_CallHistoryClient.dll    Benigno    Benigno      0.000 CERTO
+e_100_desktopimgdownldr.exe    Benigno    Benigno      0.000 CERTO
+912fd8e260cae57fe019412486...  Malware    Malware      1.000 CERTO
+d_132_authui.dll               Benigno    Benigno      0.000 CERTO
+82eed73aff63af82ec04008d7a...  Malware    Malware      1.000 CERTO
+1e0bbcaa4d9b3f4c144e10dad6...  Malware    Malware      1.000 CERTO
+e_99_deploymentcsphelper.exe   Benigno    Benigno      0.070 CERTO
+d_233_CastLaunch.dll           Benigno    Benigno      0.000 CERTO
+s_5_win32kns.sys               Benigno    Benigno      0.030 CERTO
+e_270_MRT.exe                  Benigno    Benigno      0.340 CERTO
+d_268_Chakradiag.dll           Benigno    Benigno      0.150 CERTO
+409af830ebfb982062aa6a1e8c...  Malware    Malware      1.000 CERTO
+e_162_eventvwr.exe             Benigno    Benigno      0.000 CERTO
+cd35cc5ea80b1095440dc72d65...  Malware    Malware      1.000 CERTO
+d_216_cabapi.dll               Benigno    Benigno      0.000 CERTO
+e_166_fhmanagew.exe            Benigno    Benigno      0.000 CERTO
+d_125_AuthBrokerUI.dll         Benigno    Benigno      0.000 CERTO
+e_209_InputSwitchToastHand...  Benigno    Benigno      0.000 CERTO
+df2686e6611afec0cff56a92fb...  Malware    Malware      1.000 CERTO
+b3056f1d0c01d0751933f338f9...  Malware    Malware      1.000 CERTO
+e_134_DsmUserTask.exe          Benigno    Benigno      0.000 CERTO
+e_262_mmgaserver.exe           Benigno    Benigno      0.000 CERTO
+1ca97a5913fa800f011bafd42a...  Malware    Malware      1.000 CERTO
+d_49_advpack.dll               Benigno    Benigno      0.010 CERTO
+f9515742bcd5aae2254d273eca...  Malware    Malware      0.990 CERTO
+7d4b5dee59d7ae364e5ce6d749...  Malware    Malware      1.000 CERTO
+d_94_AppXDeploymentClient.dll  Benigno    Benigno      0.030 CERTO
+e_268_MptfGenericService.exe   Benigno    Benigno      0.000 CERTO
+e_17_auditpol.exe              Benigno    Benigno      0.080 CERTO
+
+----- PRÓXIMA MENSAGEM -----
+
+PREVISÕES POR SAMPLE (continuação)
+Ficheiro                       Real       Previsto     Score Resultado
+d_50_aeevts.dll                Benigno    Benigno      0.000 CERTO
+e_299_netsh.exe                Benigno    Benigno      0.000 CERTO
+d_143_azroles.dll              Benigno    Benigno      0.010 CERTO
+d_35_AdaptiveCards.dll         Benigno    Benigno      0.000 CERTO
+75b97aca4cab0539f0bf285817...  Malware    Malware      0.980 CERTO
+e621af092eabfab8e1112be9e7...  Malware    Malware      0.970 CERTO
+d_109_atl.dll                  Benigno    Benigno      0.000 CERTO
+07f021c6da930a2ff2ce6a2707...  Malware    Malware      1.000 CERTO
+d_207_BthMtpContextHandler...  Benigno    Benigno      0.000 CERTO
+e_132_driverquery.exe          Benigno    Benigno      0.000 CERTO
+e_263_mobsync.exe              Benigno    Benigno      0.000 CERTO
+s_12_acpipagr.sys              Benigno    Benigno      0.030 CERTO
+e_229_LockAppHost.exe          Benigno    Benigno      0.000 CERTO
+d_41_adsldp.dll                Benigno    Benigno      0.000 CERTO
+e_279_msra.exe                 Benigno    Benigno      0.000 CERTO
+60802dee0eb2c897f90b59c615...  Malware    Malware      1.000 CERTO
+eca6c56187f793527df626e27d...  Malware    Malware      0.990 CERTO
+d_43_adsmsext.dll              Benigno    Benigno      0.000 CERTO
+cf9cdd5d26283d31c43eb4df35...  Malware    Malware      1.000 CERTO
+e_295_NetEvtFwdr.exe           Benigno    Benigno      0.000 CERTO
+d_118_audioresourceregistr...  Benigno    Benigno      0.000 CERTO
+40f95cd726fb26a5632f6305e8...  Malware    Malware      0.990 CERTO
+360e6f2288b6c8364159e80330...  Malware    Malware      0.880 CERTO
+d_16_AcGenral.dll              Benigno    Benigno      0.000 CERTO
+371cdc0f5ce642a6b88413d146...  Malware    Malware      0.750 CERTO
+a2f786ce50b866d6fe65bf9ef4...  Malware    Malware      1.000 CERTO
+b162ca047b3ba2aa8bb98b3acd...  Malware    Malware      0.950 CERTO
+d_187_BluetoothDesktopHand...  Benigno    Benigno      0.000 CERTO
+e_16_auditpol.exe              Benigno    Benigno      0.000 CERTO
+d2f1a27ceb90e61023066ed6ee...  Malware    Malware      1.000 CERTO
+7a7856ad1fbd7092d4503b5a2d...  Malware    Malware      1.000 CERTO
+d_151_batmeter.dll             Benigno    Benigno      0.010 CERTO
+d_282_CHxReadingStringIME.dll  Benigno    Benigno      0.000 CERTO
