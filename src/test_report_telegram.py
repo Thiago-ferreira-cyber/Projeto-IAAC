@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import html
 import hashlib
 import json
 import os
+import shutil
+import subprocess
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -172,40 +173,90 @@ def build_test_report() -> tuple[str, Path]:
     if current:
         chunks.append("\n".join(current))
 
-    report_text = MESSAGE_SEPARATOR.join(chunks)
+    source_report = MESSAGE_SEPARATOR.join(chunks)
+    report_text = generate_report_with_agent(source_report, metadata, current_manifest_hash)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = OUTPUT_DIR / f"relatorio_teste_telegram_{datetime.now():%Y%m%d_%H%M%S}.txt"
+    report_path = OUTPUT_DIR / f"relatorio_teste_agente_{datetime.now():%Y%m%d_%H%M%S}.md"
     report_path.write_text(report_text, encoding="utf-8")
     return report_text, report_path
 
 
-def send_telegram_report(report_text: str, bot_token: str, chat_id: str) -> None:
-    """Send report chunks as plain HTML-preformatted Telegram messages."""
-    chunks = report_text.split(MESSAGE_SEPARATOR)
-    for chunk in chunks:
-        payload = json.dumps({
-            "chat_id": chat_id,
-            "text": f"<pre>{html.escape(chunk)}</pre>",
-            "parse_mode": "HTML",
-        }).encode("utf-8")
-        request = urllib.request.Request(
-            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash: str) -> str:
+    """Use a local coding agent to author the final Markdown from computed results."""
+    agent_name = os.getenv("REPORT_AGENT", "codex").strip().lower()
+    executable = os.getenv("REPORT_AGENT_EXECUTABLE") or shutil.which(agent_name)
+    if not executable:
+        raise RuntimeError(
+            f"Agente '{agent_name}' não encontrado. Instala/configura o agente ou "
+            "define REPORT_AGENT_EXECUTABLE no .env."
         )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                result = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"Telegram respondeu HTTP {exc.code}: {details}"
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Falha ao contactar o Telegram: {exc}") from exc
-        if not result.get("ok"):
-            raise RuntimeError(f"Telegram rejeitou o envio: {result}")
+    prompt = (
+        "Redige um relatório conciso (máximo 3000 caracteres) em Markdown e português "
+        "europeu com base nos resultados abaixo. Preserva os valores; não inventes dados. "
+        "Resume as métricas e matriz de confusão; lista só as previsões erradas, não "
+        "reproduzas a lista completa de previsões corretas. "
+        "Indica que o modelo usou apenas a partição train e que a avaliação usa o manifesto "
+        f"SHA-256 {manifest_hash}. Acrescenta limitações: avaliação num único split não "
+        "garante desempenho futuro e resultados individuais não explicam a causa dos erros. "
+        "Entrega apenas Markdown, sem bloco de código.\n\n"
+        f"Metadados do modelo (JSON):\n{json.dumps(metadata, ensure_ascii=False, indent=2)}\n\n"
+        f"Resultados calculados (não alterar):\n{source_report}"
+    )
+    agent_environment = os.environ.copy()
+    if agent_name == "codex":
+        agent_environment.setdefault("CODEX_HOME", str(Path.home() / ".codex"))
+    try:
+        process = subprocess.run(
+            [executable, "exec", "--ephemeral", "--sandbox", "read-only", "--cd", str(ROOT), "-"],
+            input=prompt,
+            env=agent_environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=int(os.getenv("REPORT_AGENT_TIMEOUT", "300")),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError(f"Não foi possível obter o relatório do agente: {exc}") from exc
+    if process.returncode != 0:
+        detail = process.stderr.strip() or process.stdout.strip()
+        raise RuntimeError(f"O agente falhou (código {process.returncode}): {detail}")
+    report = process.stdout.strip()
+    if not report:
+        raise RuntimeError("O agente terminou sem produzir o relatório.")
+    return report + "\n"
+
+
+def send_telegram_report(report_path: Path, bot_token: str, chat_id: str) -> None:
+    """Upload the generated Markdown report to Telegram as a document."""
+    boundary = "----IAACReportBoundary7MA4YWxkTrZu0gW"
+    filename = report_path.name
+    file_bytes = report_path.read_bytes()
+    body = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
+        f"{chat_id}\r\n"
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="document"; filename="{filename}"\r\n'
+        "Content-Type: text/markdown; charset=utf-8\r\n\r\n"
+    ).encode("utf-8") + file_bytes + f"\r\n--{boundary}--\r\n".encode("ascii")
+    request = urllib.request.Request(
+        f"https://api.telegram.org/bot{bot_token}/sendDocument",
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Telegram respondeu HTTP {exc.code}: {details}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Falha ao contactar o Telegram: {exc}") from exc
+    if not result.get("ok"):
+        raise RuntimeError(f"Telegram rejeitou o envio: {result}")
 
 
 def main() -> None:
@@ -224,7 +275,7 @@ def main() -> None:
             "Relatório criado, mas não enviado. Preenche TELEGRAM_BOT_TOKEN e "
             "TELEGRAM_CHAT_ID no ficheiro .env."
         )
-    send_telegram_report(report_text, bot_token, chat_id)
+    send_telegram_report(report_path, bot_token, chat_id)
     print("Relatório enviado para o Telegram.")
 
 

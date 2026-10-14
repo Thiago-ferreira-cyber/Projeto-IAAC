@@ -39,12 +39,17 @@ Na preparação, linhas duplicadas em todas as colunas exceto `File` são removi
 
 ## Relatório de teste no Telegram
 
-O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, usa o conjunto `test` do manifesto permanente, verifica que o modelo foi treinado com esse mesmo manifesto e gera um relatório textual com métricas e previsões por sample. Guarda uma cópia `.txt` em `models/` e, se as credenciais estiverem definidas, envia o texto em mensagens para o Telegram.
+O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, avalia-o no conjunto `test` do manifesto permanente e verifica a proveniência do modelo. Python calcula as métricas; o agente Codex CLI redige a análise final num ficheiro `.md`, que é enviado como documento para o Telegram.
 
 Cria um bot através do BotFather, inicia uma conversa com o bot e preenche `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env` da raiz do projeto. O `.env` está excluído pelo `.gitignore`; `.env.example` serve de modelo. Depois executa:
 
 ```powershell
 python src/test_report_telegram.py
 ```
+
+Configura `REPORT_AGENT=codex` no `.env`; se necessário, define também
+`REPORT_AGENT_EXECUTABLE` com o caminho do executável e
+`REPORT_AGENT_TIMEOUT` com o limite de espera em segundos. A sessão Codex CLI
+tem de estar autenticada antes da execução.
 
 O modelo `latest` tem de ser o guardado pelo notebook `04_model_evaluation_optimization.ipynb`, que foi ajustado apenas no treino. O script recusa modelos sem metadados de seleção do limiar na validação, para evitar apresentar como avaliação independente um modelo treinado também com validação. O token não deve ser guardado no repositório.
