@@ -7,3 +7,4 @@ __pycache__/
 
 # Notebook and test artifacts
 .pytest_cache/
+IAAC-Repo/src/__pycache__/*.pyc
