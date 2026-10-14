@@ -1,9 +1,11 @@
 # Python environments and cache
 .venv/
 venv/
+.env
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
 # Notebook and test artifacts
 .pytest_cache/
+IAAC-Repo/src/__pycache__/*.pyc

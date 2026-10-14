@@ -13,6 +13,7 @@ from datetime import datetime
 import pandas as pd
 from sklearn.base import clone
 import matplotlib.pyplot as plt
+from data_preparation import PREPARATION_VERSION
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -343,6 +344,7 @@ def save_model(
         "dataset": dataset_name,
         "modelo": model_name,
         "timestamp": timestamp,
+        "preparation_version": PREPARATION_VERSION,
         "hiperparametros": pipe.named_steps["model"].get_params(),
         "features": list(feature_names) if feature_names is not None else None,
         "metricas": metrics or {},
