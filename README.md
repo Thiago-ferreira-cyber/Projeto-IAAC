@@ -21,6 +21,14 @@ python -m pip install -r requirements.txt
 
 Abra os notebooks com Jupyter a partir de `notebooks/`, ou execute as funções de `src/` com os caminhos relativos à raiz do repositório. A sequência recomendada é `01_data_understanding.ipynb`, `02_data_preparation.ipynb`, `03_modeling.ipynb` e `04_model_evaluation_optimization.ipynb`.
 
+## Divisão permanente dos dados
+
+A partição train/validation/test fica registada em `dataset/processed/split_manifest.csv`. O manifesto guarda cada `File`, um SHA-256 das features para manter vetores idênticos na mesma partição, outro hash das features e do alvo para detetar alterações e a partição atribuída. O alvo não é armazenado em claro no manifesto.
+
+Os notebooks 02, 03, 04 e 05 e o relatório Telegram usam este manifesto. A preparação falha se forem adicionadas/removidas amostras ou se as features/rótulos de um ficheiro mudarem; assim, não recalcula silenciosamente o conjunto de teste. O notebook 05 avalia precisamente as linhas marcadas como `test`.
+
+O manifesto foi criado uma vez com divisão estratificada, `random_state=42` e proporções de 70%/15%/15%. Para criar uma divisão nova de forma deliberada, usa `data_preparation.create_split_manifest` indicando um caminho de saída novo, revê o resultado e só depois substitui o manifesto ativo. A função recusa sobrescrever o ficheiro existente.
+
 ## Dados e avaliação
 
 O pipeline divide os dados de forma estratificada em 70% treino, 15% validação e 15% teste. A comparação inicial dos modelos usa validação cruzada no treino. Na etapa de Evaluation & Optimization, os hiperparâmetros são afinados por validação cruzada apenas no treino; a validação escolhe o limiar da classe maliciosa; e o teste fica reservado para a avaliação final.
@@ -31,7 +39,7 @@ Na preparação, linhas duplicadas em todas as colunas exceto `File` são removi
 
 ## Relatório de teste no Telegram
 
-O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, recria a divisão estratificada com `random_state=42`, avalia o conjunto de teste e gera um relatório textual com métricas e previsões por sample. Guarda uma cópia `.txt` em `models/` e, se as credenciais estiverem definidas, envia o texto em mensagens para o Telegram.
+O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, usa o conjunto `test` do manifesto permanente, verifica que o modelo foi treinado com esse mesmo manifesto e gera um relatório textual com métricas e previsões por sample. Guarda uma cópia `.txt` em `models/` e, se as credenciais estiverem definidas, envia o texto em mensagens para o Telegram.
 
 Cria um bot através do BotFather, inicia uma conversa com o bot e preenche `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env` da raiz do projeto. O `.env` está excluído pelo `.gitignore`; `.env.example` serve de modelo. Depois executa:
 
