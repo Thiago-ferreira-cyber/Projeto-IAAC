@@ -5,6 +5,7 @@ avalia overfitting, guarda métricas/CSV e o pipeline final (com metadados)
 para ser usado depois pelos agentes.
 """
 
+import hashlib
 import os
 import json
 import joblib
@@ -13,7 +14,7 @@ from datetime import datetime
 import pandas as pd
 from sklearn.base import clone
 import matplotlib.pyplot as plt
-from data_preparation import PREPARATION_VERSION
+from data_preparation import PREPARATION_VERSION, SPLIT_MANIFEST_PATH
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -315,6 +316,8 @@ def save_model(
     metrics: dict = None,
     feature_names: list = None,
     timestamp: str = None,
+    split_manifest_path: str = None,
+    training_partitions: list = None,
 ) -> str:
     """
     Guarda o pipeline treinado em <output_dir>/<dataset>_<modelo>_<timestamp>.joblib,
@@ -331,6 +334,15 @@ def save_model(
     os.makedirs(output_dir, exist_ok=True)
     safe_name = model_name.lower().replace(" ", "_")
     timestamp = timestamp or _timestamp()
+
+    # Evaluation notebook models expose threshold_selection only after the
+    # validation workflow. Preserve provenance even if an older notebook cell
+    # calls save_model without the newer optional arguments.
+    if metrics and "threshold_selection" in metrics:
+        if split_manifest_path is None:
+            split_manifest_path = str(SPLIT_MANIFEST_PATH)
+        if training_partitions is None:
+            training_partitions = ["train"]
 
     base_versioned = f"{dataset_name}_{safe_name}_{timestamp}"
     base_latest = f"{dataset_name}_{safe_name}_latest"
@@ -349,6 +361,14 @@ def save_model(
         "features": list(feature_names) if feature_names is not None else None,
         "metricas": metrics or {},
     }
+    if split_manifest_path is not None:
+        with open(split_manifest_path, "rb") as manifest_file:
+            manifest_hash = hashlib.sha256(manifest_file.read()).hexdigest()
+        metadata["split_manifest"] = {
+            "filename": os.path.basename(split_manifest_path),
+            "sha256": manifest_hash,
+            "training_partitions": list(training_partitions or []),
+        }
     meta_versioned_path = os.path.join(output_dir, f"{base_versioned}.json")
     meta_latest_path = os.path.join(output_dir, f"{base_latest}.json")
     with open(meta_versioned_path, "w", encoding="utf-8") as f:
@@ -398,6 +418,8 @@ def run_modeling(
     save_model(
         best_pipe, best_name, dataset_name=dataset_name, output_dir=output_dir,
         metrics=metrics, feature_names=list(X_train.columns), timestamp=timestamp,
+        split_manifest_path=str(SPLIT_MANIFEST_PATH),
+        training_partitions=["train", "validation"],
     )
     print("\n--- Modeling conclu?do ---")
     return best_pipe

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import os
 import urllib.error
@@ -21,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "dataset" / "raw" / "Malware_and_benign_recognition.csv"
 MODEL_PATH = ROOT / "models" / "malware_random_forest_latest.joblib"
 METADATA_PATH = ROOT / "models" / "malware_random_forest_latest.json"
+SPLIT_MANIFEST_PATH = ROOT / "dataset" / "processed" / "split_manifest.csv"
 OUTPUT_DIR = ROOT / "models"
 RANDOM_STATE = 42
 TARGET = "Malicious"
@@ -59,6 +61,19 @@ def build_test_report() -> tuple[str, Path]:
             "O modelo latest foi treinado com outra versão da preparação dos dados. "
             "Executa novamente o notebook 04 para treinar e guardar o modelo após a deduplicação."
         )
+    split_provenance = metadata.get("split_manifest", {})
+    current_manifest_hash = hashlib.sha256(SPLIT_MANIFEST_PATH.read_bytes()).hexdigest()
+    if split_provenance.get("sha256") != current_manifest_hash:
+        raise ValueError(
+            "O modelo latest não foi treinado com o manifesto de divisão ativo. "
+            "Executa novamente o notebook 04 antes de avaliar o teste."
+        )
+    if split_provenance.get("training_partitions") != ["train"]:
+        raise ValueError(
+            "O modelo latest não declara treino exclusivo na partição train. "
+            "Executa novamente o notebook 04 antes de avaliar o teste."
+        )
+
     metrics = metadata.get("metricas", {})
     # Notebook 04 records its validation-selected threshold. Notebook 03 refits on
     # train + validation, so its latest model must not be presented as test-independent.
