@@ -37,19 +37,18 @@ A comparação está implementada em `src/data_modelling.py`. A afinação, otim
 
 Na preparação, linhas duplicadas em todas as colunas exceto `File` são removidas antes da divisão. A auditoria também assinala features constantes ou idênticas sem as remover, para manter explícito o esquema de features. A versão das regras de preparação fica guardada nos metadados do modelo; depois desta alteração, executa novamente o notebook `04_model_evaluation_optimization.ipynb` antes de gerar o relatório final do teste.
 
-## Relatório de teste no Telegram
+## Relatório de teste via Hermes
 
-O script `src/test_report_telegram.py` carrega o modelo `malware_random_forest_latest.joblib`, avalia-o no conjunto `test` do manifesto permanente e verifica a proveniência do modelo. Python calcula as métricas; o agente Codex CLI redige a análise final num ficheiro `.md`, que é enviado como documento para o Telegram.
+O script `src/test_report_telegram.py` valida a proveniência do modelo `malware_random_forest_latest.joblib`, calcula as métricas no conjunto `test` e prepara um relatório Markdown. Os valores são calculados por Python; o Hermes redige o texto final e recebe instrução para o enviar como mensagem através da integração Telegram configurada na própria instalação do Hermes. O script guarda também uma cópia local em `models/`.
 
-Cria um bot através do BotFather, inicia uma conversa com o bot e preenche `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env` da raiz do projeto. O `.env` está excluído pelo `.gitignore`; `.env.example` serve de modelo. Depois executa:
+Instala e configura o Hermes CLI e a sua integração Telegram fora deste repositório. Copia `.env.example` para `.env` e confirma `REPORT_AGENT=hermes`. Se `hermes` não estiver no `PATH`, define `REPORT_AGENT_EXECUTABLE` com o caminho completo. `REPORT_AGENT_TIMEOUT` controla o limite de espera em segundos. O `.env` está excluído do Git.
+
+Executa a partir da raiz do repositório:
 
 ```powershell
 python src/test_report_telegram.py
 ```
 
-Configura `REPORT_AGENT=codex` no `.env`; se necessário, define também
-`REPORT_AGENT_EXECUTABLE` com o caminho do executável e
-`REPORT_AGENT_TIMEOUT` com o limite de espera em segundos. A sessão Codex CLI
-tem de estar autenticada antes da execução.
+O Hermes é chamado em modo não interativo com o relatório calculado via stdin. O script termina com erro se o Hermes falhar ou exceder o limite de espera. Um código de saída bem-sucedido confirma que o Hermes concluiu a tarefa, mas o envio só é possível se a integração Telegram estiver configurada e disponível para o agente.
 
-O modelo `latest` tem de ser o guardado pelo notebook `04_model_evaluation_optimization.ipynb`, que foi ajustado apenas no treino. O script recusa modelos sem metadados de seleção do limiar na validação, para evitar apresentar como avaliação independente um modelo treinado também com validação. O token não deve ser guardado no repositório.
+O modelo `latest` deve ter sido guardado pelo notebook `04_model_evaluation_optimization.ipynb`, treinado apenas na partição `train`, com o limiar selecionado na validação. O script rejeita modelos sem esta proveniência ou que não correspondam ao manifesto ativo.

@@ -7,8 +7,6 @@ import json
 import os
 import shutil
 import subprocess
-import urllib.error
-import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -182,8 +180,8 @@ def build_test_report() -> tuple[str, Path]:
 
 
 def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash: str) -> str:
-    """Use a local coding agent to author the final Markdown from computed results."""
-    agent_name = os.getenv("REPORT_AGENT", "codex").strip().lower()
+    """Use the configured local agent to write the report and send it via Telegram."""
+    agent_name = os.getenv("REPORT_AGENT", "hermes").strip().lower()
     executable = os.getenv("REPORT_AGENT_EXECUTABLE") or shutil.which(agent_name)
     if not executable:
         raise RuntimeError(
@@ -191,6 +189,9 @@ def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash
             "define REPORT_AGENT_EXECUTABLE no .env."
         )
     prompt = (
+        "Send the final report as a text message using this agent's configured Telegram "
+        "integration. If no Telegram tool is available, do not claim delivery; return "
+        "the Markdown report only.\n\n"
         "Redige um relatório conciso (máximo 3000 caracteres) em Markdown e português "
         "europeu com base nos resultados abaixo. Preserva os valores; não inventes dados. "
         "Resume as métricas e matriz de confusão; lista só as previsões erradas, não "
@@ -205,11 +206,21 @@ def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash
     agent_environment = os.environ.copy()
     if agent_name == "codex":
         agent_environment.setdefault("CODEX_HOME", str(Path.home() / ".codex"))
+    if agent_name == "hermes":
+        command = [executable, "chat", "--query-file", "-", "--oneshot", "--quiet"]
+    elif agent_name == "codex":
+        command = [executable, "exec", "--ephemeral", "--sandbox", "read-only", "--cd", str(ROOT), "-"]
+    else:
+        raise ValueError(
+            f"Agent '{agent_name}' not supported. Use REPORT_AGENT=hermes or codex."
+        )
+
     try:
         process = subprocess.run(
-            [executable, "exec", "--ephemeral", "--sandbox", "read-only", "--cd", str(ROOT), "-"],
+            command,
             input=prompt,
             env=agent_environment,
+            cwd=ROOT,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -228,55 +239,13 @@ def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash
     return report + "\n"
 
 
-def send_telegram_report(report_path: Path, bot_token: str, chat_id: str) -> None:
-    """Upload the generated Markdown report to Telegram as a document."""
-    boundary = "----IAACReportBoundary7MA4YWxkTrZu0gW"
-    filename = report_path.name
-    file_bytes = report_path.read_bytes()
-    body = (
-        f"--{boundary}\r\n"
-        'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
-        f"{chat_id}\r\n"
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="document"; filename="{filename}"\r\n'
-        "Content-Type: text/markdown; charset=utf-8\r\n\r\n"
-    ).encode("utf-8") + file_bytes + f"\r\n--{boundary}--\r\n".encode("ascii")
-    request = urllib.request.Request(
-        f"https://api.telegram.org/bot{bot_token}/sendDocument",
-        data=body,
-        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            result = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        details = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Telegram respondeu HTTP {exc.code}: {details}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Falha ao contactar o Telegram: {exc}") from exc
-    if not result.get("ok"):
-        raise RuntimeError(f"Telegram rejeitou o envio: {result}")
-
-
 def main() -> None:
     load_dotenv()
     report_text, report_path = build_test_report()
-    print(f"Relatório guardado: {report_path}")
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if (
-        not bot_token
-        or not chat_id
-        or "coloca_aqui" in bot_token.lower()
-        or "coloca_aqui" in chat_id.lower()
-    ):
-        raise SystemExit(
-            "Relatório criado, mas não enviado. Preenche TELEGRAM_BOT_TOKEN e "
-            "TELEGRAM_CHAT_ID no ficheiro .env."
-        )
-    send_telegram_report(report_path, bot_token, chat_id)
-    print("Relatório enviado para o Telegram.")
+    print(f"Relatório gerado e guardado em: {report_path}")
+    print("\n" + "="*40 + "\n")
+    print(report_text)
+    print("\n" + "="*40)
 
 
 if __name__ == "__main__":
