@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import html
+import hashlib
 import json
 import os
-import urllib.error
-import urllib.request
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "dataset" / "raw" / "Malware_and_benign_recognition.csv"
 MODEL_PATH = ROOT / "models" / "malware_random_forest_latest.joblib"
 METADATA_PATH = ROOT / "models" / "malware_random_forest_latest.json"
+SPLIT_MANIFEST_PATH = ROOT / "dataset" / "processed" / "split_manifest.csv"
 OUTPUT_DIR = ROOT / "models"
 RANDOM_STATE = 42
 TARGET = "Malicious"
@@ -59,6 +60,19 @@ def build_test_report() -> tuple[str, Path]:
             "O modelo latest foi treinado com outra versão da preparação dos dados. "
             "Executa novamente o notebook 04 para treinar e guardar o modelo após a deduplicação."
         )
+    split_provenance = metadata.get("split_manifest", {})
+    current_manifest_hash = hashlib.sha256(SPLIT_MANIFEST_PATH.read_bytes()).hexdigest()
+    if split_provenance.get("sha256") != current_manifest_hash:
+        raise ValueError(
+            "O modelo latest não foi treinado com o manifesto de divisão ativo. "
+            "Executa novamente o notebook 04 antes de avaliar o teste."
+        )
+    if split_provenance.get("training_partitions") != ["train"]:
+        raise ValueError(
+            "O modelo latest não declara treino exclusivo na partição train. "
+            "Executa novamente o notebook 04 antes de avaliar o teste."
+        )
+
     metrics = metadata.get("metricas", {})
     # Notebook 04 records its validation-selected threshold. Notebook 03 refits on
     # train + validation, so its latest model must not be presented as test-independent.
@@ -157,60 +171,81 @@ def build_test_report() -> tuple[str, Path]:
     if current:
         chunks.append("\n".join(current))
 
-    report_text = MESSAGE_SEPARATOR.join(chunks)
+    source_report = MESSAGE_SEPARATOR.join(chunks)
+    report_text = generate_report_with_agent(source_report, metadata, current_manifest_hash)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = OUTPUT_DIR / f"relatorio_teste_telegram_{datetime.now():%Y%m%d_%H%M%S}.txt"
+    report_path = OUTPUT_DIR / f"relatorio_teste_agente_{datetime.now():%Y%m%d_%H%M%S}.md"
     report_path.write_text(report_text, encoding="utf-8")
     return report_text, report_path
 
 
-def send_telegram_report(report_text: str, bot_token: str, chat_id: str) -> None:
-    """Send report chunks as plain HTML-preformatted Telegram messages."""
-    chunks = report_text.split(MESSAGE_SEPARATOR)
-    for chunk in chunks:
-        payload = json.dumps({
-            "chat_id": chat_id,
-            "text": f"<pre>{html.escape(chunk)}</pre>",
-            "parse_mode": "HTML",
-        }).encode("utf-8")
-        request = urllib.request.Request(
-            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+def generate_report_with_agent(source_report: str, metadata: dict, manifest_hash: str) -> str:
+    """Use the configured local agent to write the report and send it via Telegram."""
+    agent_name = os.getenv("REPORT_AGENT", "hermes").strip().lower()
+    executable = os.getenv("REPORT_AGENT_EXECUTABLE") or shutil.which(agent_name)
+    if not executable:
+        raise RuntimeError(
+            f"Agente '{agent_name}' não encontrado. Instala/configura o agente ou "
+            "define REPORT_AGENT_EXECUTABLE no .env."
         )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                result = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"Telegram respondeu HTTP {exc.code}: {details}"
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"Falha ao contactar o Telegram: {exc}") from exc
-        if not result.get("ok"):
-            raise RuntimeError(f"Telegram rejeitou o envio: {result}")
+    prompt = (
+        "Send the final report as a text message using this agent's configured Telegram "
+        "integration. If no Telegram tool is available, do not claim delivery; return "
+        "the Markdown report only.\n\n"
+        "Redige um relatório conciso (máximo 3000 caracteres) em Markdown e português "
+        "europeu com base nos resultados abaixo. Preserva os valores; não inventes dados. "
+        "Resume as métricas e matriz de confusão; lista só as previsões erradas, não "
+        "reproduzas a lista completa de previsões corretas. "
+        "Indica que o modelo usou apenas a partição train e que a avaliação usa o manifesto "
+        f"SHA-256 {manifest_hash}. Acrescenta limitações: avaliação num único split não "
+        "garante desempenho futuro e resultados individuais não explicam a causa dos erros. "
+        "Entrega apenas Markdown, sem bloco de código.\n\n"
+        f"Metadados do modelo (JSON):\n{json.dumps(metadata, ensure_ascii=False, indent=2)}\n\n"
+        f"Resultados calculados (não alterar):\n{source_report}"
+    )
+    agent_environment = os.environ.copy()
+    if agent_name == "codex":
+        agent_environment.setdefault("CODEX_HOME", str(Path.home() / ".codex"))
+    if agent_name == "hermes":
+        command = [executable, "chat", "--query-file", "-", "--oneshot", "--quiet"]
+    elif agent_name == "codex":
+        command = [executable, "exec", "--ephemeral", "--sandbox", "read-only", "--cd", str(ROOT), "-"]
+    else:
+        raise ValueError(
+            f"Agent '{agent_name}' not supported. Use REPORT_AGENT=hermes or codex."
+        )
+
+    try:
+        process = subprocess.run(
+            command,
+            input=prompt,
+            env=agent_environment,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=int(os.getenv("REPORT_AGENT_TIMEOUT", "300")),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError(f"Não foi possível obter o relatório do agente: {exc}") from exc
+    if process.returncode != 0:
+        detail = process.stderr.strip() or process.stdout.strip()
+        raise RuntimeError(f"O agente falhou (código {process.returncode}): {detail}")
+    report = process.stdout.strip()
+    if not report:
+        raise RuntimeError("O agente terminou sem produzir o relatório.")
+    return report + "\n"
 
 
 def main() -> None:
     load_dotenv()
     report_text, report_path = build_test_report()
-    print(f"Relatório guardado: {report_path}")
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if (
-        not bot_token
-        or not chat_id
-        or "coloca_aqui" in bot_token.lower()
-        or "coloca_aqui" in chat_id.lower()
-    ):
-        raise SystemExit(
-            "Relatório criado, mas não enviado. Preenche TELEGRAM_BOT_TOKEN e "
-            "TELEGRAM_CHAT_ID no ficheiro .env."
-        )
-    send_telegram_report(report_text, bot_token, chat_id)
-    print("Relatório enviado para o Telegram.")
+    print(f"Relatório gerado e guardado em: {report_path}")
+    print("\n" + "="*40 + "\n")
+    print(report_text)
+    print("\n" + "="*40)
 
 
 if __name__ == "__main__":
