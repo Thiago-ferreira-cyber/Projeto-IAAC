@@ -5,15 +5,16 @@ avalia overfitting, guarda métricas/CSV e o pipeline final (com metadados)
 para ser usado depois pelos agentes.
 """
 
-import json
+import hashlib
 import os
-from datetime import datetime
-from pathlib import Path
-
+import json
 import joblib
+from datetime import datetime
+
 import pandas as pd
 from sklearn.base import clone
 import matplotlib.pyplot as plt
+from data_preparation import PREPARATION_VERSION, SPLIT_MANIFEST_PATH
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -124,14 +125,6 @@ def evaluate_models(
     return results_df
 
 
-def _resolve_output_dir(output_dir: str) -> Path:
-    output_path = Path(output_dir)
-    if not output_path.is_absolute():
-        output_path = Path(__file__).resolve().parents[1] / output_path
-    output_path.mkdir(parents=True, exist_ok=True)
-    return output_path
-
-
 def save_results_csv(
     results_df: pd.DataFrame,
     dataset_name: str = "dataset",
@@ -139,12 +132,12 @@ def save_results_csv(
     timestamp: str = None,
 ) -> str:
     """Guarda a tabela de comparação de modelos em CSV, sem sobrescrever execuções anteriores."""
-    output_path = _resolve_output_dir(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
     timestamp = timestamp or _timestamp()
-    file_path = output_path / f"comparacao_modelos_{dataset_name}_{timestamp}.csv"
+    file_path = os.path.join(output_dir, f"comparacao_modelos_{dataset_name}_{timestamp}.csv")
     results_df.to_csv(file_path, index=False)
     print(f"Comparação de modelos guardada em: {file_path}")
-    return str(file_path)
+    return file_path
 
 
 def plot_model_comparison(
@@ -155,9 +148,9 @@ def plot_model_comparison(
     timestamp: str = None,
 ) -> str:
     """Guarda um gráfico de barras a comparar os modelos pela métrica escolhida, sem sobrescrever execuções anteriores."""
-    output_path = _resolve_output_dir(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
     timestamp = timestamp or _timestamp()
-    save_path = _reserve_artifact_path(str(output_path), f"comparacao_modelos_{dataset_name}_{timestamp}.png")
+    save_path = _reserve_artifact_path(output_dir, f"comparacao_modelos_{dataset_name}_{timestamp}.png")
 
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(results_df["modelo"], results_df["media"], xerr=results_df["desvio_padrao"])
@@ -323,17 +316,39 @@ def save_model(
     metrics: dict = None,
     feature_names: list = None,
     timestamp: str = None,
+    split_manifest_path: str = None,
+    training_partitions: list = None,
 ) -> str:
-    """Guarda o pipeline e seus metadados em versões persistentes e latest."""
-    output_path = _resolve_output_dir(output_dir)
+    """
+    Guarda o pipeline treinado em <output_dir>/<dataset>_<modelo>_<timestamp>.joblib,
+    mais um ficheiro .json de metadados ao lado (métricas, features, data/hora),
+    e uma cópia sem timestamp, "..._latest.joblib" / "..._latest.json".
+
+    Por omissão usa '../models', assumindo que o código está numa pasta
+    (ex.: 'src/'/'notebooks/') e a pasta 'models' já existe ao lado dela.
+
+    Cada chamada gera ficheiros novos (com timestamp), para que voltar a
+    correr o notebook/script de Modeling nunca apague nem sobrescreva os
+    modelos e métricas guardados em execuções anteriores.
+    """
+    os.makedirs(output_dir, exist_ok=True)
     safe_name = model_name.lower().replace(" ", "_")
     timestamp = timestamp or _timestamp()
+
+    # Evaluation notebook models expose threshold_selection only after the
+    # validation workflow. Preserve provenance even if an older notebook cell
+    # calls save_model without the newer optional arguments.
+    if metrics and "threshold_selection" in metrics:
+        if split_manifest_path is None:
+            split_manifest_path = str(SPLIT_MANIFEST_PATH)
+        if training_partitions is None:
+            training_partitions = ["train"]
 
     base_versioned = f"{dataset_name}_{safe_name}_{timestamp}"
     base_latest = f"{dataset_name}_{safe_name}_latest"
 
-    versioned_path = output_path / f"{base_versioned}.joblib"
-    latest_path = output_path / f"{base_latest}.joblib"
+    versioned_path = os.path.join(output_dir, f"{base_versioned}.joblib")
+    latest_path = os.path.join(output_dir, f"{base_latest}.joblib")
     joblib.dump(pipe, versioned_path)
     joblib.dump(pipe, latest_path)
 
@@ -341,12 +356,21 @@ def save_model(
         "dataset": dataset_name,
         "modelo": model_name,
         "timestamp": timestamp,
+        "preparation_version": PREPARATION_VERSION,
         "hiperparametros": pipe.named_steps["model"].get_params(),
         "features": list(feature_names) if feature_names is not None else None,
         "metricas": metrics or {},
     }
-    meta_versioned_path = output_path / f"{base_versioned}.json"
-    meta_latest_path = output_path / f"{base_latest}.json"
+    if split_manifest_path is not None:
+        with open(split_manifest_path, "rb") as manifest_file:
+            manifest_hash = hashlib.sha256(manifest_file.read()).hexdigest()
+        metadata["split_manifest"] = {
+            "filename": os.path.basename(split_manifest_path),
+            "sha256": manifest_hash,
+            "training_partitions": list(training_partitions or []),
+        }
+    meta_versioned_path = os.path.join(output_dir, f"{base_versioned}.json")
+    meta_latest_path = os.path.join(output_dir, f"{base_latest}.json")
     with open(meta_versioned_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2, default=str)
     with open(meta_latest_path, "w", encoding="utf-8") as f:
@@ -355,7 +379,7 @@ def save_model(
     print(f"Modelo guardado em: {versioned_path}")
     print(f"Metadados guardados em: {meta_versioned_path}")
     print(f"Cópias 'latest' atualizadas em: {latest_path} / {meta_latest_path}")
-    return str(versioned_path)
+    return versioned_path
 
 
 # ==========================================
@@ -394,6 +418,8 @@ def run_modeling(
     save_model(
         best_pipe, best_name, dataset_name=dataset_name, output_dir=output_dir,
         metrics=metrics, feature_names=list(X_train.columns), timestamp=timestamp,
+        split_manifest_path=str(SPLIT_MANIFEST_PATH),
+        training_partitions=["train", "validation"],
     )
     print("\n--- Modeling conclu?do ---")
     return best_pipe
@@ -401,16 +427,5 @@ def run_modeling(
 if __name__ == "__main__":
     import data_preparation as dp
 
-    X_train, X_val, X_test, y_train, y_val, y_test = dp.run_data_preparation(
-        "dataset/raw/MalwareMemoryDump.csv",
-        target="Label",
-    )
-    run_modeling(
-        X_train,
-        X_val,
-        X_test,
-        y_train,
-        y_val,
-        y_test,
-        dataset_name="malware_memory_dump",
-    )
+    X_train, X_val, X_test, y_train, y_val, y_test = dp.run_data_preparation("../dataset/raw/Malware_and_benign_recognition.csv")
+    run_modeling(X_train, X_val, X_test, y_train, y_val, y_test, dataset_name="malware")
