@@ -1,16 +1,10 @@
-#Virtual envioremnet 
 .venv/
 venv/
-
-#Python cache
-__pychache__
+__pycache__/
 *.pyc
-*.pyo
-
-# VS Code
+.ipynb_checkpoints/
+.env
+.env.*
+!.env.example
 .vscode/
-
-# OS
-.DS_Store
-Thumbs.db
-
+backup_old/

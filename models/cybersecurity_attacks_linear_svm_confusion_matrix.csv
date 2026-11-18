@@ -1,0 +1,28 @@
+,AI Agents & LLM Exploits,AI Data Leakage & Privacy Risks,AI/ML Security,Automotive / Cyber-Physical Systems,Blockchain / Web3,Blue Team,Cloud Security,Cryptography Attacks,DFIR,DevSecOps & CI/CD Security,Email & Messaging Protocol Exploits,Insider Threat,IoT / Embedded Devices,Malware & Threat,Mobile Security,Network Security,Operating System Exploits,Physical / Hardware Attacks,Quantum Cryptography & Post-Quantum Threats,Red Team,SCADA/ICS,Satellite & Space Infrastructure Security,Supply Chain Attacks,Virtualization & Container Security → Defensive Evasion & Persistence → 🛡️ Evading Container Security Tools,Web Application Security,Wireless Attacks (Advanced),Zero-Day Research / Fuzzing
+AI Agents & LLM Exploits,66,2,3,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,2,0,0
+AI Data Leakage & Privacy Risks,1,73,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0
+AI/ML Security,1,0,70,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0
+Automotive / Cyber-Physical Systems,0,0,1,35,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Blockchain / Web3,0,0,0,0,75,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+Blue Team,0,0,0,0,0,70,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0
+Cloud Security,1,2,0,0,0,0,66,1,0,0,0,0,0,0,2,2,1,0,0,0,0,0,0,0,0,0,0
+Cryptography Attacks,0,0,0,0,1,0,2,69,0,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,0
+DFIR,0,0,0,0,0,2,0,0,69,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0
+DevSecOps & CI/CD Security,0,0,1,0,0,0,0,0,0,61,0,0,0,0,0,0,0,0,0,0,0,0,2,5,0,0,0
+Email & Messaging Protocol Exploits,0,0,0,0,0,0,0,0,0,0,69,0,0,4,0,0,0,0,0,0,0,0,0,0,1,1,0
+Insider Threat,0,0,0,0,0,0,0,0,0,0,0,75,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0
+IoT / Embedded Devices,0,0,0,0,0,0,0,0,0,0,0,0,60,0,0,0,0,3,0,0,2,0,0,0,1,2,0
+Malware & Threat,0,0,2,0,0,0,1,0,0,0,3,2,2,65,1,0,0,1,0,1,0,0,0,0,0,1,0
+Mobile Security,3,3,5,0,0,0,2,0,0,0,0,0,0,0,56,2,0,1,0,0,0,0,1,0,2,0,0
+Network Security,1,1,0,0,0,0,4,0,0,0,0,0,1,0,3,58,3,0,1,0,0,0,0,0,1,1,0
+Operating System Exploits,1,1,1,0,0,0,0,0,1,0,0,0,0,0,3,0,66,0,0,0,0,0,1,0,1,0,0
+Physical / Hardware Attacks,0,0,0,0,0,0,0,0,0,0,0,3,9,2,0,0,0,64,0,0,0,0,0,0,0,4,0
+Quantum Cryptography & Post-Quantum Threats,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,78,0,0,0,0,0,0,2,0
+Red Team,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,68,0,0,3,0,0,0,0
+SCADA/ICS,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,65,0,0,0,0,2,0
+Satellite & Space Infrastructure Security,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,74,0,0,0,0,0
+Supply Chain Attacks,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,7,0,0,58,1,0,0,0
+Virtualization & Container Security → Defensive Evasion & Persistence → 🛡️ Evading Container Security Tools,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,61,0,0,0
+Web Application Security,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,73,0,0
+Wireless Attacks (Advanced),1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,76,0
+Zero-Day Research / Fuzzing,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42
